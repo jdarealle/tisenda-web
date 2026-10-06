@@ -112,6 +112,59 @@ More information on layouts can be found in the [Layouts documentation](https://
 
 ## Data Fetching
 
+### RAG query integration
+
+The query client in `src/lib/rag-api.ts` mirrors the wire contract in
+`tisenda-api/src/answer.rs` and `tisenda-api/src/server.rs`. It sends
+`POST /api/query` with `{ "question": "..." }` and validates the returned
+`text` and `sources`. Omitting `top_k` preserves the backend's configured default.
+Queries are independent; the backend does not accept conversation history or
+stream its response. A successful answer can have no sources.
+
+`src/hooks/use-rag-chat.ts` provides in-memory turns, one active query, manual
+retry, cancellation, and clearing. Cancelling stops the browser's wait; it does
+not guarantee cancellation of backend generation. Its health hook uses
+`GET /api/health`, which indicates HTTP availability only, not RAG readiness.
+
+The home page presents the chat using the official shadcn Base UI / Nova
+`Message`, `Bubble`, and `MessageScroller` components with the Zinc palette.
+Enter sends a question; Shift+Enter inserts a line break. Only one query runs at
+a time. Errors support manual retry, and "Nueva consulta" cancels the current
+wait and clears the in-memory history. Reloading also clears the history.
+
+The header's sun/moon button switches between light and dark mode using the
+shadcn Button and the official Vite theme-provider pattern. Initially the app
+follows the system theme, including live changes; an explicit selection is
+stored separately as `tisenda-theme` in localStorage. If storage is blocked,
+switching still works for the current session. Chat history is never persisted.
+
+Answers render Markdown without executing HTML or loading embedded images.
+The expandable sources preserve backend order so that citation `[n]` refers to
+source `n`. They display filenames, relative paths, headings, captions and PDF
+page numbers when present. Source paths are not download links; `/query` does
+not provide a document-download endpoint. No ingestion UI or client is included.
+
+Development runs on `http://localhost:5173` with a strict port. Vite proxies only
+`/api/query` and `/api/health`, stripping `/api`, to `http://127.0.0.1:3000`.
+Start the backend separately according to its README, then run:
+
+```bash
+bun install
+bun run dev
+```
+
+To change the backend target, provide a process environment variable:
+
+```bash
+API_PROXY_TARGET=http://127.0.0.1:4000 bun run dev
+```
+
+`API_PROXY_TARGET` configures Vite's proxy and is not bundled into the browser.
+In production, configure the host's reverse proxy to forward those same two
+paths to the backend, stripping `/api`, before applying the SPA fallback.
+Other `/api/*` paths should return 404. Static hosting alone does not supply an
+API proxy. Keep model credentials exclusively in the backend.
+
 The router context provides a `QueryClient`, and the router's `Wrap` component exposes that same instance to React through `QueryClientProvider`. Data fetching runs in the browser against an external API.
 
 There are multiple ways to fetch data in your application. You can use TanStack Query to fetch data from a server. But you can also use the `loader` functionality built into TanStack Router to load the data for a route before it's rendered.

@@ -6,6 +6,17 @@ import viteReact from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
 const config = defineConfig({
+	server: {
+		port: 5173,
+		strictPort: true,
+		proxy: {
+			"^/api/(query|health)(?:\\?.*)?$": {
+				target: process.env.API_PROXY_TARGET || "http://127.0.0.1:3000",
+				changeOrigin: true,
+				rewrite: (path) => path.replace(/^\/api/, ""),
+			},
+		},
+	},
 	resolve: { tsconfigPaths: true },
 	plugins: [
 		devtools(),

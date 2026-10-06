@@ -9,8 +9,8 @@ interface MyRouterContext {
 }
 
 export const Route = createRootRouteWithContext<MyRouterContext>()({
-  component: RootLayout,
-	notFoundComponent: () => <p>Página no encontrada.</p>
+	component: RootLayout,
+	notFoundComponent: () => <p>Página no encontrada.</p>,
 });
 
 function RootLayout() {
