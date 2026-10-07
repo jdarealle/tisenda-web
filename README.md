@@ -1,6 +1,6 @@
 # Tisenda Web
 
-Interfaz web de Tisenda para consultar documentos mediante preguntas en lenguaje natural. Se conecta a `tisenda-api`, que recupera información de los documentos indexados y genera respuestas con fuentes mediante RAG (generación aumentada por recuperación).
+Ejemplo de cliente web para el RAG (generación aumentada por recuperación) de Tisenda. Permite consultar documentos mediante preguntas en lenguaje natural y se conecta a `tisenda-api`, que recupera información de los documentos indexados y genera respuestas con fuentes.
 
 La aplicación es una SPA renderizada en el navegador. Este repositorio contiene el frontend; el backend y la indexación de documentos se ejecutan por separado.
 
