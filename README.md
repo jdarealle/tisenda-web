@@ -1,237 +1,183 @@
-Tisenda is a client-rendered SPA built with Vite, React, TanStack Router, and TanStack Query.
+# Tisenda Web
 
-# Getting Started
+Interfaz web de Tisenda para consultar documentos mediante preguntas en lenguaje natural. Se conecta a `tisenda-api`, que recupera información de los documentos indexados y genera respuestas con fuentes mediante RAG (generación aumentada por recuperación).
 
-To run this application:
+La aplicación es una SPA renderizada en el navegador. Este repositorio contiene el frontend; el backend y la indexación de documentos se ejecutan por separado.
+
+## Contenido
+
+- [Características](#características)
+- [Tecnologías](#tecnologías)
+- [Requisitos](#requisitos)
+- [Instalación y ejecución](#instalación-y-ejecución)
+- [Configuración](#configuración)
+- [Uso](#uso)
+- [Comandos disponibles](#comandos-disponibles)
+- [Estructura del proyecto](#estructura-del-proyecto)
+- [Integración con la API](#integración-con-la-api)
+- [Compilación y despliegue](#compilación-y-despliegue)
+- [Desarrollo](#desarrollo)
+
+## Características
+
+- Consulta de documentos desde una interfaz de chat.
+- Respuestas en Markdown con citas que permiten abrir y enfocar la fuente correspondiente.
+- Fuentes con nombre de archivo, ruta, encabezados, páginas de PDF cuando están disponibles y fragmento consultado.
+- Cancelación de consultas, reintento manual y limpieza del historial.
+- Indicador de conexión con la API.
+- Tema claro y oscuro, con preferencia guardada en el navegador.
+
+## Tecnologías
+
+| Área | Herramientas |
+| --- | --- |
+| Interfaz | React 19 y TypeScript |
+| Desarrollo y compilación | Vite 8 y Bun |
+| Rutas | TanStack Router, con rutas basadas en archivos |
+| Consultas y estado remoto | TanStack Query |
+| Estilos y componentes | Tailwind CSS 4, shadcn/ui y Base UI |
+| Renderizado de respuestas | react-markdown y remark-gfm |
+| Formato y análisis de código | Biome |
+
+## Requisitos
+
+- Bun instalado para gestionar dependencias y ejecutar los comandos del proyecto.
+- El backend `tisenda-api` en ejecución, con sus servicios e índice de documentos configurados según su propio README.
+- Un navegador moderno.
+
+## Instalación y ejecución
+
+Desde la raíz del repositorio, instala las dependencias:
 
 ```bash
-bun install
+bun install --frozen-lockfile
+```
+
+Inicia `tisenda-api` por separado. Por defecto, el frontend espera encontrarlo en `http://127.0.0.1:3000`.
+
+Arranca el servidor de desarrollo:
+
+```bash
 bun run dev
 ```
 
-# Building For Production
+Abre <http://localhost:5173>. El puerto es fijo: si está ocupado, Vite detendrá el arranque.
 
-To build this application for production:
+## Configuración
 
-```bash
-bun run build
-```
+| Variable | Valor predeterminado | Propósito |
+| --- | --- | --- |
+| `API_PROXY_TARGET` | `http://127.0.0.1:3000` | Dirección del backend al que Vite reenvía las consultas durante el desarrollo. |
 
-## Styling
-
-This project uses [Tailwind CSS](https://tailwindcss.com/) for styling.
-
-### Removing Tailwind CSS
-
-If you prefer not to use Tailwind CSS:
-
-1. Replace Tailwind utility classes in your components with your own styles
-2. Replace the Tailwind import in `src/styles.css` with your own styles
-3. Remove `tailwindcss()` from the plugins array in `vite.config.ts`
-4. Remove `@tailwindcss/vite` and `tailwindcss` from `package.json`
-
-## Linting & Formatting
-
-This project uses [Biome](https://biomejs.dev/) for linting and formatting. The following scripts are available:
-
-
-```bash
-bun run lint
-bun run format
-bun run check
-```
-
-
-## Shadcn
-
-Add components using the latest version of [Shadcn](https://ui.shadcn.com/).
-
-```bash
-bunx shadcn@latest add button
-```
-
-
-
-## Routing
-
-This project uses [TanStack Router](https://tanstack.com/router) with file-based routing. Routes are managed as files in `src/routes`.
-
-### Adding A Route
-
-To add a new route to your application just add a new file in the `./src/routes` directory.
-
-The Router plugin generates `src/routeTree.gen.ts` during development and builds. Do not edit this generated file manually. You can also generate it with `bun run generate-routes`.
-
-Now that you have two routes you can use a `Link` component to navigate between them.
-
-### Adding Links
-
-To use SPA (Single Page Application) navigation you will need to import the `Link` component from `@tanstack/react-router`.
-
-```tsx
-import { Link } from "@tanstack/react-router";
-```
-
-Then anywhere in your JSX you can use it like so:
-
-```tsx
-<Link to="/about">About</Link>
-```
-
-This will create a link that will navigate to the `/about` route.
-
-More information on the `Link` component can be found in the [Link documentation](https://tanstack.com/router/v1/docs/framework/react/api/router/linkComponent).
-
-### Using A Layout
-
-The layout is located in `src/routes/__root.tsx`. Shared UI belongs in the root route component, and the active child route renders through `<Outlet />`.
-
-`index.html` defines the HTML document. `src/main.tsx` imports the global stylesheet and mounts React using `createRoot` and `RouterProvider`.
-
-Here is an example layout that includes a header:
-
-```tsx
-import { createRootRoute, Link, Outlet } from '@tanstack/react-router'
-
-export const Route = createRootRoute({
-  component: () => (
-    <>
-      <header>
-        <nav>
-          <Link to="/">Home</Link>
-          <Link to="/about">About</Link>
-        </nav>
-      </header>
-      <Outlet />
-    </>
-  ),
-})
-```
-
-More information on layouts can be found in the [Layouts documentation](https://tanstack.com/router/latest/docs/framework/react/guide/routing-concepts#layouts).
-
-## Data Fetching
-
-### RAG query integration
-
-The query client in `src/lib/rag-api.ts` mirrors the wire contract in
-`tisenda-api/src/answer/types.rs` and `tisenda-api/src/server/http.rs`, also
-documented by the backend at `/openapi.json` and `/docs`. It sends
-`POST /api/query` with `{ "question": "..." }` and validates the returned
-`text` and `sources`. Only `question` is accepted: the server rejects unknown
-request fields and controls `TOP_K` through its own configuration.
-Queries are independent; the backend does not accept conversation history or
-stream its response. A successful answer with no sources means insufficient
-evidence, whether retrieval found no usable fragments or the model could not
-answer from the selected context. The server's message is displayed as returned.
-
-Each source contains `id`, `filename`, `source_key`, `location`, and `excerpt`.
-`location.kind` describes the format category; `location.page_numbers` and
-`location.headings` are optional arrays, omitted rather than null when absent.
-The client checks this structure and rejects duplicate source identifiers.
-Query errors use `{ "error": "..." }` with HTTP 400, 500, 502, or 503.
-The backend validates citation syntax and existence, attempts one correction,
-and returns 502 if references remain invalid. The client displays this error
-and offers manual retry; it does not automatically repeat generation.
-
-`src/hooks/use-rag-chat.ts` provides in-memory turns, one active query, manual
-retry, cancellation, and clearing. Cancelling stops the browser's wait; it does
-not guarantee cancellation of backend generation. Its health hook uses
-`GET /api/health`, which indicates HTTP availability only, not RAG readiness.
-
-The home page presents the chat using the official shadcn Base UI / Nova
-`Message`, `Bubble`, and `MessageScroller` components with the Zinc palette.
-Enter sends a question; Shift+Enter inserts a line break. Only one query runs at
-a time. Errors support manual retry, and "Nueva consulta" cancels the current
-wait and clears the in-memory history. Reloading also clears the history.
-
-The header's sun/moon button switches between light and dark mode using the
-shadcn Button and the official Vite theme-provider pattern. Initially the app
-follows the system theme, including live changes; an explicit selection is
-stored separately as `tisenda-theme` in localStorage. If storage is blocked,
-switching still works for the current session. Chat history is never persisted.
-
-Answers render Markdown without executing HTML or loading embedded images.
-Citation `[n]` resolves by `sources[].id`, never by array position: `[3][1]`
-refers to sources `"3"` and `"1"` in that order. Citation buttons open the
-answer's expandable sources and focus the corresponding fragment, including
-when activated with a keyboard. Targets are scoped to each turn. Inline code,
-code blocks, and links retain their normal Markdown rendering.
-
-Sources preserve backend order and identifiers, including separate fragments
-from the same document. They display filenames, relative paths, known headings,
-PDF page numbers when available, and the complete `excerpt` as plain text under
-"Fragmento consultado". This is the indexed context sent to the model, not a
-model-selected quotation or proof that every claim is supported. Source paths
-are not download links; `/query` does not provide a document-download endpoint.
-No ingestion UI or client is included.
-
-Development runs on `http://localhost:5173` with a strict port. Vite proxies only
-`/api/query` and `/api/health`, stripping `/api`, to `http://127.0.0.1:3000`.
-Start the backend separately according to its README, then run:
-
-```bash
-bun install
-bun run dev
-```
-
-To change the backend target, provide a process environment variable:
+Para usar otro puerto o servidor, proporciona la variable al iniciar Vite:
 
 ```bash
 API_PROXY_TARGET=http://127.0.0.1:4000 bun run dev
 ```
 
-`API_PROXY_TARGET` configures Vite's proxy and is not bundled into the browser.
-In production, configure the host's reverse proxy to forward those same two
-paths to the backend, stripping `/api`, before applying the SPA fallback.
-Other `/api/*` paths should return 404. Static hosting alone does not supply an
-API proxy. Keep model credentials exclusively in the backend.
+El proxy de desarrollo reenvía únicamente `/api/query` y `/api/health`, eliminando el prefijo `/api`. `API_PROXY_TARGET` configura ese proxy y no se incorpora al código del navegador. Las credenciales del modelo se configuran exclusivamente en el backend.
 
-The router context provides a `QueryClient`, and the router's `Wrap` component exposes that same instance to React through `QueryClientProvider`. Data fetching runs in the browser against an external API.
+## Uso
 
-There are multiple ways to fetch data in your application. You can use TanStack Query to fetch data from a server. But you can also use the `loader` functionality built into TanStack Router to load the data for a route before it's rendered.
+1. Escribe una pregunta y pulsa **Enter** para enviarla. Usa **Shift+Enter** para insertar un salto de línea.
+2. Consulta la respuesta y pulsa una cita, como `[1]`, para ver el fragmento asociado en **Fuentes**.
+3. Si la consulta falla o se cancela, usa **Reintentar** para enviarla de nuevo.
+4. Pulsa **Nueva consulta** para cancelar la espera actual y borrar el historial.
 
-For example:
+Solo se procesa una consulta a la vez. El historial permanece en memoria y se pierde al recargar la página. Cada pregunta se envía de forma independiente: la API no recibe las preguntas ni las respuestas anteriores y devuelve la respuesta completa, sin streaming.
 
-```tsx
-import { createFileRoute } from '@tanstack/react-router'
+El botón de sol/luna cambia el tema. Inicialmente se sigue la preferencia del sistema; una selección manual se guarda en `localStorage` con la clave `tisenda-theme`.
 
-export const Route = createFileRoute('/people')({
-  loader: async () => {
-    const response = await fetch('https://swapi.dev/api/people')
-    return response.json()
-  },
-  component: PeopleComponent,
-})
+Las fuentes muestran el contexto indexado que recibió el modelo. Sus rutas son informativas y no permiten descargar documentos. Una respuesta sin fuentes se presenta como falta de evidencia suficiente. Esta interfaz no incluye carga ni indexación de archivos.
 
-function PeopleComponent() {
-  const data = Route.useLoaderData()
-  return (
-    <ul>
-      {data.results.map((person) => (
-        <li key={person.name}>{person.name}</li>
-      ))}
-    </ul>
-  )
+## Comandos disponibles
+
+| Comando | Descripción |
+| --- | --- |
+| `bun run dev` | Inicia el servidor de desarrollo en el puerto 5173. |
+| `bun run generate-routes` | Genera el árbol de rutas de TanStack Router. |
+| `bun run tsc --noEmit` | Comprueba los tipos de TypeScript sin generar archivos. |
+| `bun run lint` | Ejecuta el análisis de código con Biome. |
+| `bun run format` | Comprueba el formato con Biome. |
+| `bun run check` | Ejecuta las comprobaciones de Biome. |
+| `bun run build` | Genera la aplicación de producción en `dist/`. |
+| `bun run preview` | Sirve localmente la compilación de producción. |
+
+Para aplicar las correcciones de formato, ejecuta `bun run format --write`.
+
+## Estructura del proyecto
+
+```text
+src/
+├── components/
+│   ├── ui/                  # Componentes de interfaz compartidos
+│   ├── rag-chat.tsx         # Interfaz de consulta
+│   ├── rag-answer.tsx       # Markdown y citas de las respuestas
+│   ├── rag-sources.tsx      # Fuentes y fragmentos consultados
+│   └── theme-provider.tsx   # Estado y persistencia del tema
+├── hooks/
+│   └── use-rag-chat.ts      # Consultas, historial, cancelación y salud de la API
+├── integrations/
+│   └── tanstack-query/     # Configuración de TanStack Query
+├── lib/
+│   └── rag-api.ts           # Cliente HTTP y validación de respuestas
+├── routes/                 # Rutas basadas en archivos
+├── main.tsx                # Punto de entrada de React
+├── router.tsx              # Configuración del router
+├── routeTree.gen.ts        # Árbol de rutas generado automáticamente
+└── styles.css              # Estilos globales
+```
+
+`index.html` define el documento HTML y `vite.config.ts` configura los plugins, el servidor de desarrollo y el proxy de la API.
+
+## Integración con la API
+
+El contrato del cliente está definido en [`src/lib/rag-api.ts`](src/lib/rag-api.ts) y corresponde a los tipos y endpoints de `tisenda-api`. El backend documenta su API en `/openapi.json` y `/docs`.
+
+| Petición del frontend | Endpoint del backend | Función |
+| --- | --- | --- |
+| `POST /api/query` | `POST /query` | Envía una pregunta y obtiene una respuesta con fuentes. |
+| `GET /api/health` | `GET /health` | Comprueba la disponibilidad HTTP de la API. |
+
+La consulta envía únicamente este cuerpo JSON:
+
+```json
+{
+  "question": "¿Qué información contienen los documentos sobre este tema?"
 }
 ```
 
-Loaders simplify your data fetching logic dramatically. Check out more information in the [Loader documentation](https://tanstack.com/router/latest/docs/framework/react/guide/data-loading#loader-parameters).
+La respuesta contiene `text` y `sources`. Cada fuente incluye `id`, `filename`, `source_key`, `location` y `excerpt`. En `location`, `kind` indica el formato; `page_numbers` y `headings` son opcionales y se omiten cuando no están disponibles. El cliente valida la estructura y rechaza identificadores duplicados. Las citas se resuelven mediante `sources[].id`, no por su posición en la lista.
 
+Los errores de la API usan el cuerpo `{ "error": "..." }` y los estados HTTP 400, 500, 502 o 503. La interfaz permite reintentos manuales, sin repetir automáticamente la generación. El backend controla la recuperación, incluido `TOP_K`, y valida las citas; si siguen siendo inválidas tras un intento de corrección, devuelve 502.
 
+El endpoint de salud solo confirma disponibilidad HTTP; no comprueba el índice ni los servicios de recuperación y generación. Cancelar una consulta detiene la espera del navegador, pero no garantiza detener la generación en el backend.
 
-# Learn More
+## Compilación y despliegue
 
-You can learn more about all of the offerings from TanStack in the [TanStack documentation](https://tanstack.com).
-
-## Validation and Deployment
+Valida y compila el proyecto:
 
 ```bash
 bun run generate-routes
 bun run tsc --noEmit
 bun run check
 bun run build
-bun run preview
 ```
 
-Publish the generated `dist/` directory to a static host. Configure the host to serve `index.html` for frontend routes so direct links and page refreshes work. API requests should continue to go to your backend.
+Publica el contenido de `dist/` en el servidor de alojamiento. Configura el servidor para:
+
+- Reenviar `/api/query` y `/api/health` al backend, eliminando `/api` antes de enviar la petición.
+- Devolver 404 para otras rutas `/api/*`.
+- Servir `index.html` como fallback para las rutas del frontend, después de resolver las peticiones de la API, de modo que los enlaces directos y las recargas funcionen.
+
+El alojamiento estático por sí solo no proporciona el proxy de la API. El proxy configurado para desarrollo no forma parte de los archivos generados en `dist/`.
+
+Puedes revisar la compilación localmente con `bun run preview`; para probar consultas, el entorno de previsualización también debe proporcionar acceso a la API en `/api/query` y `/api/health`.
+
+## Desarrollo
+
+Añade nuevas rutas en `src/routes/`. El layout raíz se encuentra en `src/routes/__root.tsx` y la página de consulta en `src/routes/index.tsx`. TanStack Router genera `src/routeTree.gen.ts` durante el desarrollo y la compilación; evita editarlo manualmente.
+
+El router comparte una instancia de `QueryClient` con los componentes mediante `QueryClientProvider`. Los componentes de UI viven en `src/components/ui/` y los estilos globales en `src/styles.css`.
+
+Las respuestas se renderizan como Markdown sin ejecutar HTML ni cargar imágenes incrustadas. Conserva este comportamiento y la relación entre los identificadores de las fuentes y las citas al modificar la interfaz de respuestas.
