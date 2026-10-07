@@ -1,5 +1,5 @@
 import { BookOpenIcon, ChevronDownIcon } from "lucide-react";
-import { useState } from "react";
+import { useEffect } from "react";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import {
@@ -19,12 +19,30 @@ const LOCATION_LABELS: Record<string, string> = {
 	document: "Documento",
 };
 
-export function RagSources({ sources }: { sources: Source[] }) {
-	const [open, setOpen] = useState(false);
+export function RagSources({
+	sources,
+	open,
+	onOpenChange,
+	sourceIdPrefix,
+	citation,
+}: {
+	sources: Source[];
+	open: boolean;
+	onOpenChange: (open: boolean) => void;
+	sourceIdPrefix: string;
+	citation: { id: string } | null;
+}) {
+	useEffect(() => {
+		if (!open || !citation) return;
+		const target = document.getElementById(`${sourceIdPrefix}-${citation.id}`);
+		target?.focus({ preventScroll: true });
+		target?.scrollIntoView({ block: "nearest" });
+	}, [open, citation, sourceIdPrefix]);
+
 	if (sources.length === 0) return null;
 
 	return (
-		<Collapsible open={open} onOpenChange={setOpen}>
+		<Collapsible open={open} onOpenChange={onOpenChange}>
 			<CollapsibleTrigger render={<Button variant="ghost" size="sm" />}>
 				<BookOpenIcon data-icon="inline-start" aria-hidden="true" />
 				Fuentes ({sources.length})
@@ -34,18 +52,21 @@ export function RagSources({ sources }: { sources: Source[] }) {
 					className={cn("transition-transform", open && "rotate-180")}
 				/>
 			</CollapsibleTrigger>
-			<CollapsibleContent>
+			<CollapsibleContent keepMounted>
 				<ol
 					aria-label="Fuentes de esta respuesta"
 					className="flex flex-col gap-4 px-2 py-3"
 				>
-					{sources.map((source, index) => (
+					{sources.map((source) => (
 						<li
-							key={`${source.source_key}:${source.chunk_index}`}
-							className="flex min-w-0 gap-3 text-sm"
+							key={source.id}
+							id={`${sourceIdPrefix}-${source.id}`}
+							tabIndex={-1}
+							aria-label={`Fuente ${source.id}: ${source.filename}`}
+							className="flex min-w-0 scroll-my-3 gap-3 rounded-md text-sm focus:outline-2 focus:outline-ring"
 						>
 							<Badge variant="secondary" className="h-fit">
-								[{index + 1}]
+								[{source.id}]
 							</Badge>
 							<div className="flex min-w-0 flex-col gap-1 wrap-anywhere">
 								<p className="font-medium">{source.filename}</p>
@@ -53,19 +74,16 @@ export function RagSources({ sources }: { sources: Source[] }) {
 									{source.source_key}
 								</p>
 								<p className="text-muted-foreground">
-									{LOCATION_LABELS[source.location_kind] ?? "Documento"}
-									{source.location_kind === "page" &&
-										!!source.page_numbers?.length &&
-										` · ${source.page_numbers.length === 1 ? "Página" : "Páginas"} ${source.page_numbers.join(", ")}`}
+									{LOCATION_LABELS[source.location.kind] ?? "Documento"}
+									{source.location.kind === "page" &&
+										!!source.location.page_numbers?.length &&
+										` · ${source.location.page_numbers.length === 1 ? "Página" : "Páginas"} ${source.location.page_numbers.join(", ")}`}
 								</p>
-								{!!source.headings?.length && (
-									<p>{source.headings.join(" › ")}</p>
+								{!!source.location.headings?.length && (
+									<p>{source.location.headings.join(" › ")}</p>
 								)}
-								{!!source.captions?.length && (
-									<p className="text-muted-foreground">
-										{source.captions.join(" · ")}
-									</p>
-								)}
+								<p className="mt-2 font-medium">Fragmento consultado</p>
+								<p className="whitespace-pre-wrap">{source.excerpt}</p>
 							</div>
 						</li>
 					))}

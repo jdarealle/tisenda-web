@@ -1,20 +1,20 @@
-/** Wire contract from tisenda-api/src/answer.rs and src/server.rs. */
+/** Wire contract from tisenda-api/src/answer/types.rs and src/server/http.rs. */
 export interface QueryRequest {
 	question: string;
-	top_k?: number | null;
+}
+
+export interface SourceLocation {
+	kind: string;
+	page_numbers?: number[];
+	headings?: string[];
 }
 
 export interface Source {
+	id: string;
 	filename: string;
 	source_key: string;
-	headings: string[] | null;
-	captions: string[] | null;
-	page_numbers: number[] | null;
-	doc_items: string[];
-	chunk_index: number;
-	score: number;
-	location_kind: string;
-	provenance: unknown;
+	location: SourceLocation;
+	excerpt: string;
 }
 
 export interface Answer {
@@ -56,19 +56,18 @@ function isUnsignedInteger(value: unknown): value is number {
 function isSource(value: unknown): value is Source {
 	return (
 		isRecord(value) &&
+		typeof value.id === "string" &&
+		/^[1-9][0-9]*$/.test(value.id) &&
 		typeof value.filename === "string" &&
 		typeof value.source_key === "string" &&
-		(value.headings === null || isStringArray(value.headings)) &&
-		(value.captions === null || isStringArray(value.captions)) &&
-		(value.page_numbers === null ||
-			(Array.isArray(value.page_numbers) &&
-				value.page_numbers.every(isUnsignedInteger))) &&
-		isStringArray(value.doc_items) &&
-		isUnsignedInteger(value.chunk_index) &&
-		typeof value.score === "number" &&
-		Number.isFinite(value.score) &&
-		typeof value.location_kind === "string" &&
-		"provenance" in value
+		typeof value.excerpt === "string" &&
+		isRecord(value.location) &&
+		typeof value.location.kind === "string" &&
+		(value.location.headings === undefined ||
+			isStringArray(value.location.headings)) &&
+		(value.location.page_numbers === undefined ||
+			(Array.isArray(value.location.page_numbers) &&
+				value.location.page_numbers.every(isUnsignedInteger)))
 	);
 }
 
@@ -111,15 +110,7 @@ export async function queryRag(
 ): Promise<Answer> {
 	const question = request.question.trim();
 	if (!question) throw new RagApiError("Escribe una pregunta para consultar.");
-	if (
-		request.top_k != null &&
-		(!Number.isInteger(request.top_k) ||
-			request.top_k < 1 ||
-			request.top_k > 50)
-	) {
-		throw new RagApiError("top_k debe ser un entero entre 1 y 50.");
-	}
-	const body = JSON.stringify({ question, top_k: request.top_k });
+	const body = JSON.stringify({ question });
 	if (new TextEncoder().encode(body).byteLength > 256 * 1024) {
 		throw new RagApiError("La pregunta supera el tamaño permitido por la API.");
 	}
@@ -134,7 +125,9 @@ export async function queryRag(
 		typeof answer.text !== "string" ||
 		!answer.text.trim() ||
 		!Array.isArray(answer.sources) ||
-		!answer.sources.every(isSource)
+		!answer.sources.every(isSource) ||
+		new Set(answer.sources.map((source) => source.id)).size !==
+			answer.sources.length
 	) {
 		throw new RagApiError(
 			"La respuesta de la API no cumple el contrato de consulta.",

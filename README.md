@@ -115,11 +115,24 @@ More information on layouts can be found in the [Layouts documentation](https://
 ### RAG query integration
 
 The query client in `src/lib/rag-api.ts` mirrors the wire contract in
-`tisenda-api/src/answer.rs` and `tisenda-api/src/server.rs`. It sends
+`tisenda-api/src/answer/types.rs` and `tisenda-api/src/server/http.rs`, also
+documented by the backend at `/openapi.json` and `/docs`. It sends
 `POST /api/query` with `{ "question": "..." }` and validates the returned
-`text` and `sources`. Omitting `top_k` preserves the backend's configured default.
+`text` and `sources`. Only `question` is accepted: the server rejects unknown
+request fields and controls `TOP_K` through its own configuration.
 Queries are independent; the backend does not accept conversation history or
-stream its response. A successful answer can have no sources.
+stream its response. A successful answer with no sources means insufficient
+evidence, whether retrieval found no usable fragments or the model could not
+answer from the selected context. The server's message is displayed as returned.
+
+Each source contains `id`, `filename`, `source_key`, `location`, and `excerpt`.
+`location.kind` describes the format category; `location.page_numbers` and
+`location.headings` are optional arrays, omitted rather than null when absent.
+The client checks this structure and rejects duplicate source identifiers.
+Query errors use `{ "error": "..." }` with HTTP 400, 500, 502, or 503.
+The backend validates citation syntax and existence, attempts one correction,
+and returns 502 if references remain invalid. The client displays this error
+and offers manual retry; it does not automatically repeat generation.
 
 `src/hooks/use-rag-chat.ts` provides in-memory turns, one active query, manual
 retry, cancellation, and clearing. Cancelling stops the browser's wait; it does
@@ -139,10 +152,19 @@ stored separately as `tisenda-theme` in localStorage. If storage is blocked,
 switching still works for the current session. Chat history is never persisted.
 
 Answers render Markdown without executing HTML or loading embedded images.
-The expandable sources preserve backend order so that citation `[n]` refers to
-source `n`. They display filenames, relative paths, headings, captions and PDF
-page numbers when present. Source paths are not download links; `/query` does
-not provide a document-download endpoint. No ingestion UI or client is included.
+Citation `[n]` resolves by `sources[].id`, never by array position: `[3][1]`
+refers to sources `"3"` and `"1"` in that order. Citation buttons open the
+answer's expandable sources and focus the corresponding fragment, including
+when activated with a keyboard. Targets are scoped to each turn. Inline code,
+code blocks, and links retain their normal Markdown rendering.
+
+Sources preserve backend order and identifiers, including separate fragments
+from the same document. They display filenames, relative paths, known headings,
+PDF page numbers when available, and the complete `excerpt` as plain text under
+"Fragmento consultado". This is the indexed context sent to the model, not a
+model-selected quotation or proof that every claim is supported. Source paths
+are not download links; `/query` does not provide a document-download endpoint.
+No ingestion UI or client is included.
 
 Development runs on `http://localhost:5173` with a strict port. Vite proxies only
 `/api/query` and `/api/health`, stripping `/api`, to `http://127.0.0.1:3000`.

@@ -64,6 +64,10 @@ function AssistantReply({
 	busy: boolean;
 	onRetry: (id: string) => void;
 }) {
+	const [sourcesOpen, setSourcesOpen] = useState(false);
+	const [citation, setCitation] = useState<{ id: string } | null>(null);
+	const sourceIdPrefix = `rag-${turn.id}-source`;
+
 	return (
 		<Message>
 			<MessageAvatar>
@@ -85,14 +89,31 @@ function AssistantReply({
 					<>
 						<Bubble variant="ghost">
 							<BubbleContent>
-								<RagAnswer text={turn.answer.text} />
+								<RagAnswer
+									text={turn.answer.text}
+									sources={turn.answer.sources}
+									sourceIdPrefix={sourceIdPrefix}
+									onCitation={(id) => {
+										setSourcesOpen(true);
+										setCitation({ id });
+									}}
+								/>
 							</BubbleContent>
 						</Bubble>
 						{turn.answer.sources.length > 0 ? (
-							<RagSources sources={turn.answer.sources} />
+							<RagSources
+								sources={turn.answer.sources}
+								open={sourcesOpen}
+								onOpenChange={(open) => {
+									setSourcesOpen(open);
+									setCitation(null);
+								}}
+								sourceIdPrefix={sourceIdPrefix}
+								citation={citation}
+							/>
 						) : (
 							<MessageFooter>
-								Sin fuentes recuperadas para esta consulta.
+								Sin evidencia suficiente para responder esta consulta.
 							</MessageFooter>
 						)}
 					</>
