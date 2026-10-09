@@ -1,3 +1,4 @@
+import { cn } from "cn";
 import {
 	ArrowDownIcon,
 	ArrowUpIcon,
@@ -23,12 +24,7 @@ import {
 	EmptyMedia,
 	EmptyTitle,
 } from "#/components/ui/empty";
-import {
-	Field,
-	FieldDescription,
-	FieldGroup,
-	FieldLabel,
-} from "#/components/ui/field";
+import { Field, FieldGroup, FieldLabel } from "#/components/ui/field";
 import {
 	InputGroup,
 	InputGroupAddon,
@@ -190,6 +186,15 @@ export function RagChat() {
 						role="status"
 						title="Indica si la API responde; no comprueba la disponibilidad de los documentos."
 					>
+						<span
+							aria-hidden="true"
+							className={cn("mr-1 size-2 shrink-0 rounded-full", {
+								"bg-success ring-2 ring-success/20": health.isSuccess,
+								"bg-destructive": health.isError,
+								"bg-muted-foreground motion-safe:animate-pulse":
+									!health.isSuccess && !health.isError,
+							})}
+						/>
 						{healthLabel}
 					</Badge>
 					<Button variant="outline" onClick={newChat}>
@@ -283,7 +288,7 @@ export function RagChat() {
 									id="rag-question"
 									name="question"
 									placeholder="Pregunta sobre tus documentos…"
-									aria-describedby="query-help query-keyboard"
+									aria-describedby="query-keyboard"
 									value={draft}
 									onChange={(event) => setDraft(event.target.value)}
 									onKeyDown={(event) => {
@@ -297,8 +302,8 @@ export function RagChat() {
 											submit();
 										}
 									}}
-									rows={2}
-									className="max-h-40 min-h-20"
+									rows={1}
+									className="max-h-40 min-h-0 overflow-y-auto"
 								/>
 								<InputGroupAddon align="block-end">
 									<span id="query-keyboard" className="text-xs">
@@ -331,10 +336,6 @@ export function RagChat() {
 									)}
 								</InputGroupAddon>
 							</InputGroup>
-							<FieldDescription id="query-help">
-								Cada pregunta es independiente. El historial se borra al
-								recargar.
-							</FieldDescription>
 						</Field>
 					</FieldGroup>
 				</form>
